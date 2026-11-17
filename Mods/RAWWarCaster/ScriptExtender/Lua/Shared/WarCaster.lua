@@ -175,13 +175,27 @@ local function MergeInterruptContexts(ctxA, ctxB)
     return merged
 end
 
+local function CleanKhonCondition(cond)
+    if cond == nil then
+        return ""
+    end
+    local trimmed = string.gsub(cond, ";+%s*$", "")
+    trimmed = string.gsub(trimmed, "^%s+", "")
+    trimmed = string.gsub(trimmed, "%s+$", "")
+    return trimmed
+end
+
 local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
-    local triggerCond = stdCond or ""
-    if isPM and pmCond ~= nil and pmCond ~= "" then
+    local cleanStd = CleanKhonCondition(stdCond)
+    local cleanPm = CleanKhonCondition(pmCond)
+    local cleanTarget = CleanKhonCondition(spellTargetCond)
+
+    local triggerCond = cleanStd
+    if isPM and cleanPm ~= "" then
         if triggerCond ~= "" then
-            triggerCond = string.format("((%s) or (%s))", triggerCond, pmCond)
+            triggerCond = string.format("((%s) or (%s))", triggerCond, cleanPm)
         else
-            triggerCond = pmCond
+            triggerCond = cleanPm
         end
     end
 
@@ -189,18 +203,17 @@ local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
         and "HasPassive('WarCaster_OpportunitySpell', context.Observer) and HasPassive('PolearmMaster_AttackOfOpportunity', context.Observer)"
         or "HasPassive('WarCaster_OpportunitySpell', context.Observer)"
 
-    -- Ensure the mover (context.Source) is NOT the War Caster (context.Observer), and the target is an Enemy
-    local baseGuard = string.format(
-        "not Self(context.Source, context.Observer) and Enemy(context.Target, context.Observer) and (%s)",
+    -- In BG3 movement interrupts: context.Observer/context.Source is the reactor, context.Target is the mover
+    local guardCond = string.format(
+        "not Self(context.Observer, context.Target) and Enemy() and (%s)",
         featCond
     )
 
-    local combined = baseGuard
+    local combined = guardCond
     if triggerCond ~= "" then
-        combined = string.format("(%s) and (%s)", triggerCond, baseGuard)
+        combined = string.format("(%s) and (%s)", triggerCond, guardCond)
     end
 
-    local cleanTarget = spellTargetCond or ""
     if cleanTarget ~= "" then
         return string.format("(%s) and (%s)", combined, cleanTarget)
     end

@@ -37,6 +37,24 @@ local function HasFlag(flagList, targetFlag)
     return false
 end
 
+local function GetTrueRootSpell(spellName)
+    local current = spellName
+    local visited = {}
+    while current ~= nil and current ~= "" and not visited[current] do
+        visited[current] = true
+        local stat = Ext.Stats.Get(current)
+        if stat == nil then
+            break
+        end
+        if stat.RootSpellID ~= nil and stat.RootSpellID ~= "" and stat.RootSpellID ~= current then
+            current = stat.RootSpellID
+        else
+            break
+        end
+    end
+    return current
+end
+
 local function IsEligibleWarCasterSpell(spellName, stat)
     local areaRadius = tonumber(stat.AreaRadius or 0) or 0
     local aoeCond = stat.AoEConditions or ""
@@ -483,6 +501,39 @@ if Ext.IsServer() then
                     local src = id.ProgressionSource ~= nil and tostring(id.ProgressionSource) or ""
                     if src ~= "" and src ~= "00000000-0000-0000-0000-000000000000" then
                         knownSpells[id.Prototype] = true
+                    end
+                end
+            end
+        end
+
+        -- Expand linked spell containers (e.g. Chromatic Orb -> Acid, Cold, Fire, Lightning, Poison, Thunder)
+        local containerChildren = {}
+        for spellName, _ in pairs(knownSpells) do
+            local sStat = Ext.Stats.Get(spellName)
+            if sStat ~= nil and sStat.ModifierList == "SpellData" then
+                local cSpells = sStat.ContainerSpells or ""
+                if cSpells ~= "" then
+                    for subSpell in string.gmatch(cSpells, "[^;]+") do
+                        containerChildren[subSpell] = true
+                    end
+                end
+            end
+        end
+        for subSpell, _ in pairs(containerChildren) do
+            knownSpells[subSpell] = true
+        end
+
+        -- Include only leveled upcast variants (slotTier > 0) whose RootSpellID is in knownSpells
+        for _, spellName in ipairs(Ext.Stats.GetStats("SpellData") or {}) do
+            if not IsNpcOrIgnoredSpell(spellName) then
+                local sStat = Ext.Stats.Get(spellName)
+                if sStat ~= nil and sStat.ModifierList == "SpellData" then
+                    local slotTier = GetSpellSlotTier(sStat.UseCosts)
+                    if slotTier > 0 then
+                        local rootId = GetTrueRootSpell(spellName)
+                        if rootId ~= "" and rootId ~= spellName and knownSpells[rootId] then
+                            knownSpells[spellName] = true
+                        end
                     end
                 end
             end

@@ -189,9 +189,16 @@ local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
         and "HasPassive('WarCaster_OpportunitySpell', context.Observer) and HasPassive('PolearmMaster_AttackOfOpportunity', context.Observer)"
         or "HasPassive('WarCaster_OpportunitySpell', context.Observer)"
 
-    local combined = triggerCond ~= ""
-        and string.format("(%s) and (%s)", triggerCond, featCond)
-        or featCond
+    -- Ensure the mover (context.Source) is NOT the War Caster (context.Observer), and the target is an Enemy
+    local baseGuard = string.format(
+        "not Self(context.Source, context.Observer) and Enemy(context.Target, context.Observer) and (%s)",
+        featCond
+    )
+
+    local combined = baseGuard
+    if triggerCond ~= "" then
+        combined = string.format("(%s) and (%s)", triggerCond, baseGuard)
+    end
 
     local cleanTarget = spellTargetCond or ""
     if cleanTarget ~= "" then

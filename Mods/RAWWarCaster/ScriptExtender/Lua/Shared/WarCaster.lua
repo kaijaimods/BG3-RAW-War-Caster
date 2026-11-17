@@ -80,8 +80,23 @@ local function IsEligibleWarCasterSpell(spellName, stat)
         return false
     end
 
+    -- Exclude out-of-combat social cantrips/spells like Friends (which require 'not Combat()')
+    if string.find(targetCond, "not%s+Combat%(%)") then
+        return false
+    end
+
+    -- Require an attack roll/saving throw (e.g. Hold Person, Booming Blade, Ray of Sickness)
+    -- or direct damage intent (e.g. Magic Missile) so harmless utility/social spells are excluded
+    local spellRoll = stat.SpellRoll or ""
     local intent = stat.VerbalIntent or ""
-    local isHostile = (intent == "Damage") or (intent == "Debuff") or (intent == "Control") or HasFlag(stat.SpellFlags, "IsHarmful")
+    local hasRollOrSave = spellRoll ~= ""
+    local isDamageSpell = (intent == "Damage")
+
+    if not hasRollOrSave and not isDamageSpell then
+        return false
+    end
+
+    local isHostile = isDamageSpell or (intent == "Debuff") or (intent == "Control") or HasFlag(stat.SpellFlags, "IsHarmful")
     if not isHostile then
         return false
     end
@@ -159,7 +174,6 @@ local function MergeInterruptContexts(ctxA, ctxB)
     end
     return merged
 end
-
 
 local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
     local triggerCond = stdCond or ""

@@ -325,6 +325,7 @@ end
 if Ext.IsServer() then
     local CharacterSlotMap = {}
     local CharacterActivePassives = {}
+    local PendingRebuilds = {}
 
     local function NormalizeUuid(guid)
         if guid ~= nil and math.floor(#guid / 36) ~= 0 then
@@ -448,7 +449,8 @@ if Ext.IsServer() then
         if entity.SpellBook ~= nil and entity.SpellBook.Spells ~= nil then
             for _, entry in ipairs(entity.SpellBook.Spells) do
                 local id = entry.Id
-                if id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
+                local isPrepared = tostring(entry.SpellPrepareType or "") ~= "Unprepared"
+                if isPrepared and id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
                     local src = id.ProgressionSource ~= nil and tostring(id.ProgressionSource) or ""
                     if src ~= "" and src ~= "00000000-0000-0000-0000-000000000000" then
                         knownSpells[id.Prototype] = true
@@ -598,12 +600,29 @@ if Ext.IsServer() then
     Ext.Events.SessionLoaded:Subscribe(function()
         local function DelayedRebuild(character)
             local uuid = NormalizeUuid(character)
-            if uuid ~= nil then
-                Ext.Timer.WaitFor(500, function()
-                    RebuildSingleCharacter(uuid)
-                end)
+            if uuid == nil then
+                return
             end
+
+            local token = (PendingRebuilds[uuid] or 0) + 1
+            PendingRebuilds[uuid] = token
+
+            Ext.Timer.WaitFor(500, function()
+                if PendingRebuilds[uuid] == token then
+                    PendingRebuilds[uuid] = nil
+                    RebuildSingleCharacter(uuid)
+                end
+            end)
         end
+
+		
+		Ext.Osiris.RegisterListener("SpellPrepared", 2, "after", function(character, spell)
+            DelayedRebuild(character)
+        end)
+
+        Ext.Osiris.RegisterListener("SpellUnprepared", 2, "after", function(character, spell)
+            DelayedRebuild(character)
+        end)
 
         Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)
             DelayedRebuild(character)

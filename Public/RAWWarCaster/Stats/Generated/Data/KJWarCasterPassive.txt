@@ -1,0 +1,767 @@
+new entry "KJ_WarCaster_Char1_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char1_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char2_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char3_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char4_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char5_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char6_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char7_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char8_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char9_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char10_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char11_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char12_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char13_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char14_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char15_12"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_1"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_2"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_3"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_4"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_5"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_6"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_7"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_8"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_9"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_10"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_11"
+type "PassiveData"
+data "Properties" "IsHidden"
+
+new entry "KJ_WarCaster_Char16_12"
+type "PassiveData"
+data "Properties" "IsHidden"

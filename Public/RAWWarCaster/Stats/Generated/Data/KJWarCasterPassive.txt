@@ -1,3 +1,10 @@
+new entry "WarCaster_OpportunitySpell"
+type "PassiveData"
+using "WarCaster_OpportunitySpell"
+data "Description" "h23a166e7g9e85g4ae1g852agb146711c3cde;1"
+data "ExtraDescription" "hedecc252g864dg4b8fgb290g0c43c632b9ec;1"
+data "Boosts" ""
+
 new entry "KJ_WarCaster_Char1_1"
 type "PassiveData"
 data "Properties" "IsHidden"

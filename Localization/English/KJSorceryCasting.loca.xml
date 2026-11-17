@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <contentList>
-	<content contentuid="c13e6e6b-7429-4ae4-b510-ca38884f7ab1" version="1">Sorcery Point Casting</content>
-	<content contentuid="35f95e84-3d7b-46f8-bf6f-22a4a3d9adf1" version="1">You can cast spells using sorcery points</content>
+	<content contentuid="h23a166e7g9e85g4ae1g852agb146711c3cde" version="1">You can use a &lt;LSTag Type="ActionResource" Tooltip="ReactionActionPoint"&gt;reaction&lt;/LSTag&gt; to cast a spell at a creature whose movement provokes an &lt;LSTag Tooltip="OpportunityAttack"&gt;Attack of Opportunity&lt;/LSTag&gt; from you.</content>
+	<content contentuid="hedecc252g864dg4b8fgb290g0c43c632b9ec" version="1">The spell must have a casting time of 1 action and must target only that creature.</content>
 </contentList>

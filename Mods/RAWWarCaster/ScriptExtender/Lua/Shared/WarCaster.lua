@@ -38,6 +38,12 @@ local function HasFlag(flagList, targetFlag)
 end
 
 local function IsEligibleWarCasterSpell(spellName, stat)
+    local areaRadius = tonumber(stat.AreaRadius or 0) or 0
+    local aoeCond = stat.AoEConditions or ""
+    if areaRadius > 0 and aoeCond ~= "false" then
+        return false
+    end
+	
     if stat == nil or stat.ModifierList ~= "SpellData" then
         return false
     end

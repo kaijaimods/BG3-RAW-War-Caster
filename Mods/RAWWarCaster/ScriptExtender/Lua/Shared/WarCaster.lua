@@ -459,11 +459,21 @@ if Ext.IsServer() then
         CharacterActivePassives[uuid] = {}
 
         local knownSpells = {}
-        if entity.SpellBook ~= nil and entity.SpellBook.Spells ~= nil then
+        if entity.SpellBookPrepares ~= nil and entity.SpellBookPrepares.PreparedSpells ~= nil then
+            for _, entry in ipairs(entity.SpellBookPrepares.PreparedSpells) do
+                local proto = entry.OriginatorPrototype
+                local src = entry.ProgressionSource ~= nil and tostring(entry.ProgressionSource) or ""
+                local srcType = tostring(entry.SourceType or "")
+                if proto ~= nil and proto ~= ""
+                    and src ~= "" and src ~= "00000000-0000-0000-0000-000000000000"
+                    and srcType ~= "Boost" and srcType ~= "WeaponSpell" then
+                    knownSpells[proto] = true
+                end
+            end
+        elseif entity.SpellBook ~= nil and entity.SpellBook.Spells ~= nil then
             for _, entry in ipairs(entity.SpellBook.Spells) do
                 local id = entry.Id
-                local isPrepared = tostring(entry.SpellPrepareType or "") ~= "Unprepared"
-                if isPrepared and id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
+                if id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
                     local src = id.ProgressionSource ~= nil and tostring(id.ProgressionSource) or ""
                     if src ~= "" and src ~= "00000000-0000-0000-0000-000000000000" then
                         knownSpells[id.Prototype] = true
@@ -628,13 +638,16 @@ if Ext.IsServer() then
             end)
         end
 
-		
-		Ext.Osiris.RegisterListener("SpellPrepared", 2, "after", function(character, spell)
-            DelayedRebuild(character)
+        Ext.Entity.OnChange("SpellBookPrepares", function(entity)
+            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
+                DelayedRebuild(entity.Uuid.EntityUuid)
+            end
         end)
 
-        Ext.Osiris.RegisterListener("SpellUnprepared", 2, "after", function(character, spell)
-            DelayedRebuild(character)
+        Ext.Entity.OnChange("SpellBook", function(entity)
+            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
+                DelayedRebuild(entity.Uuid.EntityUuid)
+            end
         end)
 
         Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)

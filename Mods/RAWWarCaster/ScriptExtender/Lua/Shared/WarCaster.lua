@@ -211,7 +211,7 @@ local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
     -- Restrict touch/melee spells (1.5m) to standard melee range even when wielding a 10ft (3m) reach weapon
     local targetRadius = tostring(spellStat.TargetRadius or "")
     local rangeGuard = ""
-    if targetRadius == "1.5" or targetRadius == "MeleeMainWeaponRange" then
+    if targetRadius == "1.5" then
         rangeGuard = " and DistanceToTarget() <= 2.0"
     end
 

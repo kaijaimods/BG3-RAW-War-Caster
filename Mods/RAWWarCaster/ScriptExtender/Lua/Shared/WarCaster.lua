@@ -185,10 +185,10 @@ local function CleanKhonCondition(cond)
     return trimmed
 end
 
-local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
+local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
     local cleanStd = CleanKhonCondition(stdCond)
     local cleanPm = CleanKhonCondition(pmCond)
-    local cleanTarget = CleanKhonCondition(spellTargetCond)
+    local cleanTarget = CleanKhonCondition(spellStat.TargetConditions)
 
     local triggerCond = cleanStd
     if isPM and cleanPm ~= "" then
@@ -203,9 +203,14 @@ local function BuildCombinedConditions(stdCond, pmCond, spellTargetCond, isPM)
         and "HasPassive('WarCaster_OpportunitySpell', context.Observer) and HasPassive('PolearmMaster_AttackOfOpportunity', context.Observer)"
         or "HasPassive('WarCaster_OpportunitySpell', context.Observer)"
 
-    -- In BG3 movement interrupts: context.Observer/context.Source is the reactor, context.Target is the mover
+    local spellBlockCond = "not HasSpellCastBlocked(context.Observer)"
+    if HasFlag(spellStat.SpellFlags, "HasVerbalComponent") then
+        spellBlockCond = spellBlockCond .. " and not HasStatus('SG_Silenced', context.Observer)"
+    end
+
     local guardCond = string.format(
-        "not Self(context.Observer, context.Target) and Enemy() and (%s)",
+        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)",
+        spellBlockCond,
         featCond
     )
 
@@ -238,9 +243,9 @@ local function CreateWarCasterInterruptVariant(newIntName, stdInt, pmInt, spellN
 
     if isPM and pmInt ~= nil and stdInt ~= nil then
         newInt.InterruptContext = MergeInterruptContexts(stdInt.InterruptContext, pmInt.InterruptContext)
-        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, pmInt.Conditions, spellStat.TargetConditions, true)
+        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, pmInt.Conditions, spellStat, true)
     else
-        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, nil, spellStat.TargetConditions, false)
+        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, nil, spellStat, false)
     end
 
     SetInterruptUseSpell(newInt, baseInt, spellName)

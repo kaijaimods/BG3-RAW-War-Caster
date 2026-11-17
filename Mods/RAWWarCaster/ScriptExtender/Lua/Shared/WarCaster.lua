@@ -208,10 +208,18 @@ local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
         spellBlockCond = spellBlockCond .. " and not HasStatus('SG_Silenced', context.Observer)"
     end
 
+    -- Restrict touch/melee spells (1.5m) to standard melee range even when wielding a 10ft (3m) reach weapon
+    local targetRadius = tostring(spellStat.TargetRadius or "")
+    local rangeGuard = ""
+    if targetRadius == "1.5" or targetRadius == "MeleeMainWeaponRange" then
+        rangeGuard = " and DistanceToTarget() <= 2.0"
+    end
+
     local guardCond = string.format(
-        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)",
+        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)%s",
         spellBlockCond,
-        featCond
+        featCond,
+        rangeGuard
     )
 
     local combined = guardCond

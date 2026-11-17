@@ -76,7 +76,7 @@ local function IsEligibleWarCasterSpell(spellName, stat)
     end
 
     local targetCond = stat.TargetConditions or ""
-    if targetCond == "" or targetCond == "Self()" or not string.find(targetCond, "Character%(%)") then
+    if targetCond == "" or targetCond == "Self()" or string.find(targetCond, "Ground%(%)") then
         return false
     end
 

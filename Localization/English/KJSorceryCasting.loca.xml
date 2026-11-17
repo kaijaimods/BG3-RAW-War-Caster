@@ -2,4 +2,5 @@
 <contentList>
 	<content contentuid="h23a166e7g9e85g4ae1g852agb146711c3cde" version="1">You can use a &lt;LSTag Type="ActionResource" Tooltip="ReactionActionPoint"&gt;reaction&lt;/LSTag&gt; to cast a spell at a creature whose movement provokes an &lt;LSTag Tooltip="OpportunityAttack"&gt;Attack of Opportunity&lt;/LSTag&gt; from you.</content>
 	<content contentuid="hedecc252g864dg4b8fgb290g0c43c632b9ec" version="1">The spell must have a casting time of 1 action and must target only that creature.</content>
+	<content contentuid="hed7f1993g8a20g43dag9b9fg488c9c2a8fc8" version="1">You gain &lt;LSTag Tooltip="Advantage"&gt;Advantage&lt;/LSTag&gt; on &lt;LSTag Tooltip="SavingThrow"&gt;Saving Throws&lt;/LSTag&gt; to maintain &lt;LSTag Tooltip="Concentration"&gt;Concentration&lt;/LSTag&gt; on a spell.&lt;br&gt;&lt;br&gt;You can also use a &lt;LSTag Type="ActionResource" Tooltip="ReactionActionPoint"&gt;reaction&lt;/LSTag&gt; to cast a spell at a creature whose movement provokes an &lt;LSTag Tooltip="OpportunityAttack"&gt;Attack of Opportunity&lt;/LSTag&gt; from you.</content>
 </contentList>

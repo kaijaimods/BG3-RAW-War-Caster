@@ -188,6 +188,90 @@ local function CleanKhonCondition(cond)
     return trimmed
 end
 
+local SINGLE_ARG_KHON_FUNCS = {
+    -- Entity & Creature Types
+    "Character", "Item", "Dead", "Player", "Party", "Summon",
+    "Familiar", "Companion", "Follower", "Origin", "Avatar", "Boss",
+    "Humanoid", "Undead", "Construct", "Beast", "Animal", "Dragon",
+    "Elemental", "Fey", "Fiend", "Giant", "Monstrosity", "Ooze",
+    "Plant", "Insect", "Aberration", "Celestial", "Shapechanger", "Spirit",
+
+    -- Status & Crowd Control States
+    "IsDowned", "IsCrowdControlled", "Incapacitated", "Unconscious",
+    "Prone", "Blinded", "Charmed", "Frightened", "Paralyzed",
+    "Petrified", "Poisoned", "Restrained", "Stunned", "Silenced",
+    "Banished", "Surprised", "Invisible", "Hidden", "Sneaking",
+    "Concentration", "Concentrating",
+
+    -- Movement & Environment States
+    "Combat", "TurnBased", "Grounded", "Flying", "Falling",
+    "Climbing", "Swimming", "Jumping", "InSunlight",
+    "Obscured", "HeavilyObscured", "LightlyObscured",
+}
+
+local SPELLDATA_ONLY_FUNCS = {
+    "CanUseWeaponActions",
+    "CanUseSpellActions",
+    "HasActionPoint",
+    "HasBonusActionPoint",
+    "HasReactionActionPoint",
+    "IsWeaponAttack",
+    "IsSpellAttack",
+    "CanSee",
+    "HasLineOfSight",
+    "InRange",
+    "HasSpell",
+    "IsSpellPrepared",
+}
+
+local function ScrubSpellDataOnlyFunctions(condStr)
+    local clean = CleanKhonCondition(condStr)
+    if clean == "" then
+        return ""
+    end
+
+    for _, fnName in ipairs(SPELLDATA_ONLY_FUNCS) do
+        local callPat = "%f[%w_]" .. fnName .. "%b()"
+        clean = string.gsub(clean, callPat .. "%s*and%s*", "")
+        clean = string.gsub(clean, "%s*and%s*" .. callPat, "")
+        clean = string.gsub(clean, "^%s*%(?%s*" .. callPat .. "%s*%)?%s*$", "")
+    end
+
+    return CleanKhonCondition(clean)
+end
+
+local function TranslateTargetConditionsForInterrupt(rawTargetCond)
+    local clean = ScrubSpellDataOnlyFunctions(rawTargetCond)
+    if clean == "" then
+        return ""
+    end
+
+    clean = string.gsub(clean, "Self%(%)", "Self(context.Observer, context.Target)")
+    for _, fnName in ipairs(SINGLE_ARG_KHON_FUNCS) do
+        clean = string.gsub(clean, "(%f[%w_]" .. fnName .. ")%(%)", "%1(context.Target)")
+    end
+    clean = string.gsub(clean, "(%f[%w_]Tagged)%(([^,)]+)%)", "%1(%2, context.Target)")
+    clean = string.gsub(clean, "(%f[%w_]HasStatus)%(([^,)]+)%)", "%1(%2, context.Target)")
+
+    return clean
+end
+
+local function TranslateRequirementConditionsForInterrupt(rawReqCond)
+    local clean = ScrubSpellDataOnlyFunctions(rawReqCond)
+    if clean == "" then
+        return ""
+    end
+
+    clean = string.gsub(clean, "Self%(%)", "Self(context.Observer, context.Observer)")
+    for _, fnName in ipairs(SINGLE_ARG_KHON_FUNCS) do
+        clean = string.gsub(clean, "(%f[%w_]" .. fnName .. ")%(%)", "%1(context.Observer)")
+    end
+    clean = string.gsub(clean, "(%f[%w_]Tagged)%(([^,)]+)%)", "%1(%2, context.Observer)")
+    clean = string.gsub(clean, "(%f[%w_]HasStatus)%(([^,)]+)%)", "%1(%2, context.Observer)")
+
+    return clean
+end
+
 local function BuildWarCasterConditions(stdCond, pmCond, spellStat, isPM)
     local cleanStd = CleanKhonCondition(stdCond)
     local cleanPm = CleanKhonCondition(pmCond)
@@ -216,11 +300,25 @@ local function BuildWarCasterConditions(stdCond, pmCond, spellStat, isPM)
         rangeGuard = " and DistanceToTarget() <= 2.0"
     end
 
+    local extraClauses = {}
+    local translatedTarget = TranslateTargetConditionsForInterrupt(spellStat.TargetConditions)
+    if translatedTarget ~= "" then
+        table.insert(extraClauses, string.format("(%s)", translatedTarget))
+    end
+
+    local translatedReq = TranslateRequirementConditionsForInterrupt(spellStat.RequirementConditions)
+    if translatedReq ~= "" then
+        table.insert(extraClauses, string.format("(%s)", translatedReq))
+    end
+
+    local extraStr = #extraClauses > 0 and (" and " .. table.concat(extraClauses, " and ")) or ""
+
     local guardCond = string.format(
-        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)%s",
+        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)%s%s",
         spellBlockCond,
         featCond,
-        rangeGuard
+        rangeGuard,
+        extraStr
     )
 
     if triggerCond ~= "" then

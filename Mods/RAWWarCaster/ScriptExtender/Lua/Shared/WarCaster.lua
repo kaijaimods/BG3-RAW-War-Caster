@@ -1,13 +1,23 @@
 local MAX_CHAR_SLOTS = 16
 local SLOTS_PER_CHAR = 12
 local WAR_CASTER_PASSIVE = "WarCaster_OpportunitySpell"
-local POLEARM_MASTER_PASSIVE = "PolearmMaster_AttackOfOpportunity"
 
 local syncChannel = Ext.Net.CreateChannel(ModuleUUID, "KJ_WarCaster_SyncPools")
 local requestChannel = Ext.Net.CreateChannel(ModuleUUID, "KJ_WarCaster_RequestSync")
 
-local SpellToWCInterrupts = {}
-local CachedChildrenMap = nil
+local SpellToWCInterrupt = {}
+local RootToUpcasts = {}
+
+local CASTING_ABILITIES = {
+    { key = "INT", statName = "Intelligence" },
+    { key = "WIS", statName = "Wisdom" },
+    { key = "CHA", statName = "Charisma" },
+}
+
+local ABILITY_SHORT = {}
+for _, ab in ipairs(CASTING_ABILITIES) do
+    ABILITY_SHORT[ab.statName] = ab.key
+end
 
 local function GetCharPassiveName(charIndex, slotIndex)
     return string.format("KJ_WarCaster_Char%d_%d", charIndex, slotIndex)
@@ -56,15 +66,16 @@ local function GetTrueRootSpell(spellName)
 end
 
 local function IsEligibleWarCasterSpell(spellName, stat)
+    if stat == nil or stat.ModifierList ~= "SpellData" then
+        return false
+    end
+
     local areaRadius = tonumber(stat.AreaRadius or 0) or 0
     local aoeCond = stat.AoEConditions or ""
     if areaRadius > 0 and aoeCond ~= "false" then
         return false
     end
-	
-    if stat == nil or stat.ModifierList ~= "SpellData" then
-        return false
-    end
+
     if IsNpcOrIgnoredSpell(spellName) then
         return false
     end
@@ -104,13 +115,10 @@ local function IsEligibleWarCasterSpell(spellName, stat)
         return false
     end
 
-    -- Exclude out-of-combat social cantrips/spells like Friends (which require 'not Combat()')
     if string.find(targetCond, "not%s+Combat%(%)") then
         return false
     end
 
-    -- Require an attack roll/saving throw (e.g. Hold Person, Booming Blade, Ray of Sickness)
-    -- or direct damage intent (e.g. Magic Missile) so harmless utility/social spells are excluded
     local spellRoll = stat.SpellRoll or ""
     local intent = stat.VerbalIntent or ""
     local hasRollOrSave = spellRoll ~= ""
@@ -125,7 +133,6 @@ local function IsEligibleWarCasterSpell(spellName, stat)
         return false
     end
 
-    -- Skip sub-spells or container root spells that cannot be cast directly
     if HasFlag(stat.SpellFlags, "IsLinkedSpellContainer") then
         return false
     end
@@ -146,34 +153,6 @@ end
 local function GetSpellSlotTier(useCosts)
     local slotStr = string.match(useCosts or "", "[%w_]*SpellSlots?G?r?o?u?p?:%d+:%d+:(%d+)")
     return tonumber(slotStr) or 0
-end
-
-local function SetInterruptUseSpell(newInt, baseInt, spellName)
-    local templateInt = Ext.Stats.Get("Interrupt_WarCaster") or baseInt
-    if templateInt ~= nil and templateInt.Properties ~= nil then
-        local exported = Ext.DumpExport(templateInt.Properties)
-        if exported ~= nil and exported[1] ~= nil and exported[1].Functors ~= nil then
-            for _, functor in ipairs(exported[1].Functors) do
-                if functor.TypeId == "UseSpell" then
-                    functor.SpellId = spellName
-                end
-            end
-            newInt.Properties = exported
-            return
-        end
-    end
-
-    if newInt.Properties ~= nil then
-        for _, group in ipairs(newInt.Properties) do
-            if group.Functors ~= nil then
-                for _, functor in ipairs(group.Functors) do
-                    if functor.TypeId == "UseSpell" then
-                        functor.SpellId = spellName
-                    end
-                end
-            end
-        end
-    end
 end
 
 local function MergeInterruptContexts(ctxA, ctxB)
@@ -209,10 +188,9 @@ local function CleanKhonCondition(cond)
     return trimmed
 end
 
-local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
+local function BuildWarCasterConditions(stdCond, pmCond, spellStat, isPM)
     local cleanStd = CleanKhonCondition(stdCond)
     local cleanPm = CleanKhonCondition(pmCond)
-    local cleanTarget = CleanKhonCondition(spellStat.TargetConditions)
 
     local triggerCond = cleanStd
     if isPM and cleanPm ~= "" then
@@ -232,7 +210,6 @@ local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
         spellBlockCond = spellBlockCond .. " and not HasStatus('SG_Silenced', context.Observer)"
     end
 
-    -- Restrict touch/melee spells (1.5m) to standard melee range even when wielding a 10ft (3m) reach weapon
     local targetRadius = tostring(spellStat.TargetRadius or "")
     local rangeGuard = ""
     if targetRadius == "1.5" then
@@ -246,89 +223,167 @@ local function BuildCombinedConditions(stdCond, pmCond, spellStat, isPM)
         rangeGuard
     )
 
-    local combined = guardCond
     if triggerCond ~= "" then
-        combined = string.format("(%s) and (%s)", triggerCond, guardCond)
+        return string.format("(%s) and (%s)", triggerCond, guardCond)
     end
-
-    if cleanTarget ~= "" then
-        return string.format("(%s) and (%s)", combined, cleanTarget)
-    end
-    return combined
+    return guardCond
 end
 
-local function CreateWarCasterInterruptVariant(newIntName, stdInt, pmInt, spellName, spellStat, isPM)
-    local baseInt = (isPM and pmInt ~= nil) and pmInt or stdInt
-    if baseInt == nil then
-        return false
+local function GetSpellRollString(spellStat)
+    local current = spellStat
+    local visited = {}
+    while current ~= nil do
+        if current.Name ~= nil then
+            if visited[current.Name] then
+                break
+            end
+            visited[current.Name] = true
+        end
+
+        if current.SpellRoll ~= nil then
+            local ok, defVal = pcall(function()
+                return current.SpellRoll.Default
+            end)
+            if ok and type(defVal) == "string" and defVal ~= "" then
+                return defVal
+            end
+            if type(current.SpellRoll) == "string" and current.SpellRoll ~= "" then
+                return current.SpellRoll
+            end
+            local dumped = Ext.DumpExport(current.SpellRoll)
+            if type(dumped) == "table" and type(dumped.Default) == "string" and dumped.Default ~= "" then
+                return dumped.Default
+            end
+        end
+
+        local parentName = current.Using
+        if parentName ~= nil and parentName ~= "" then
+            current = Ext.Stats.Get(parentName)
+        else
+            break
+        end
+    end
+    return ""
+end
+
+local function GetOrCreateAbilitySpell(spellName, abilityStatName, rollStr)
+    local shortKey = ABILITY_SHORT[abilityStatName]
+    if shortKey == nil then
+        return spellName
     end
 
-    local newInt = Ext.Stats.Get(newIntName) or Ext.Stats.Create(newIntName, "InterruptData", baseInt.Name)
+    local newSpellName = string.format("KJ_WC_Spell_%s_%s", shortKey, spellName)
+    local newSpell = Ext.Stats.Get(newSpellName) or Ext.Stats.Create(newSpellName, "SpellData", spellName)
+    if newSpell == nil then
+        return spellName
+    end
+
+    if rollStr ~= "" and string.find(rollStr, "SourceSpellDC%(%)") then
+        local updatedRoll = string.gsub(rollStr, "SourceSpellDC%(%)", "SourceSpellDC(Ability." .. abilityStatName .. ")")
+        newSpell:SetRawAttribute("SpellRoll", updatedRoll)
+    end
+
+    newSpell:Sync()
+    return newSpellName
+end
+
+local function CreateWarCasterInterruptVariant(intName, baseTemplate, pmInt, spellName, spellStat, isPM, abilityStatName, rollStr)
+    local newInt = Ext.Stats.Get(intName) or Ext.Stats.Create(intName, "InterruptData", baseTemplate.Name)
     if newInt == nil then
         return false
     end
+
+    local targetSpell = GetOrCreateAbilitySpell(spellName, abilityStatName, rollStr)
 
     newInt.DisplayName = spellStat.DisplayName
     newInt.Description = spellStat.Description
     newInt.Icon = spellStat.Icon
     newInt.Cost = BuildInterruptCostFromSpell(spellStat.UseCosts)
 
-    if isPM and pmInt ~= nil and stdInt ~= nil then
-        newInt.InterruptContext = MergeInterruptContexts(stdInt.InterruptContext, pmInt.InterruptContext)
-        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, pmInt.Conditions, spellStat, true)
+    if isPM and pmInt ~= nil then
+        newInt.InterruptContext = MergeInterruptContexts(baseTemplate.InterruptContext, pmInt.InterruptContext)
+        newInt.Conditions = BuildWarCasterConditions(baseTemplate.Conditions, pmInt.Conditions, spellStat, true)
     else
-        newInt.Conditions = BuildCombinedConditions(stdInt.Conditions, nil, spellStat, false)
+        newInt.Conditions = BuildWarCasterConditions(baseTemplate.Conditions, nil, spellStat, false)
     end
 
-    SetInterruptUseSpell(newInt, baseInt, spellName)
+    newInt:SetRawAttribute("Properties", string.format("TARGET,AOE:UseSpell(%s,true,true,true)", targetSpell))
     newInt:Sync()
-
     return true
 end
 
 local function GenerateWarCasterReactions()
-    SpellToWCInterrupts = {}
+    SpellToWCInterrupt = {}
+    RootToUpcasts = {}
+
     local allSpells = Ext.Stats.GetStats("SpellData") or {}
+    local wcInt = Ext.Stats.Get("Interrupt_WarCaster")
     local stdInt = Ext.Stats.Get("Interrupt_AttackOfOpportunity")
     local pmInt = Ext.Stats.Get("Interrupt_PolearmMaster")
+    local baseTemplate = wcInt or stdInt
+    if baseTemplate == nil then
+        return
+    end
+
     local createdCount = 0
 
     for _, spellName in ipairs(allSpells) do
-        local stat = Ext.Stats.Get(spellName)
-        if IsEligibleWarCasterSpell(spellName, stat) then
-            local slotTier = GetSpellSlotTier(stat.UseCosts)
-            local stdIntName = "KJ_WC_Interrupt_" .. spellName
-
-            if CreateWarCasterInterruptVariant(stdIntName, stdInt, nil, spellName, stat, false) then
-                SpellToWCInterrupts[spellName] = SpellToWCInterrupts[spellName] or {}
-                table.insert(SpellToWCInterrupts[spellName], {
-                    interrupt = stdIntName,
-                    level = slotTier,
-                    isPM = false,
-                })
-                createdCount = createdCount + 1
+        local spellStat = Ext.Stats.Get(spellName)
+        if IsEligibleWarCasterSpell(spellName, spellStat) then
+            local slotTier = GetSpellSlotTier(spellStat.UseCosts)
+            if slotTier > 0 then
+                local rootId = GetTrueRootSpell(spellName)
+                if rootId ~= "" and rootId ~= spellName then
+                    RootToUpcasts[rootId] = RootToUpcasts[rootId] or {}
+                    table.insert(RootToUpcasts[rootId], spellName)
+                end
             end
 
-            if pmInt ~= nil then
-                local pmIntName = "KJ_WC_PM_Interrupt_" .. spellName
-                if CreateWarCasterInterruptVariant(pmIntName, stdInt, pmInt, spellName, stat, true) then
-                    SpellToWCInterrupts[spellName] = SpellToWCInterrupts[spellName] or {}
-                    table.insert(SpellToWCInterrupts[spellName], {
-                        interrupt = pmIntName,
+            local rollStr = GetSpellRollString(spellStat)
+            local needsAbility = (rollStr ~= "" and string.find(rollStr, "SourceSpellDC%(%)") ~= nil)
+            SpellToWCInterrupt[spellName] = {}
+
+            local variants = needsAbility and CASTING_ABILITIES or { { key = "DEF", statName = "Default" } }
+
+            for _, ab in ipairs(variants) do
+                local stdName = (ab.key == "DEF")
+                    and ("KJ_WC_Interrupt_" .. spellName)
+                    or string.format("KJ_WC_%s_Interrupt_%s", ab.key, spellName)
+
+                if CreateWarCasterInterruptVariant(stdName, baseTemplate, nil, spellName, spellStat, false, ab.statName, rollStr) then
+                    table.insert(SpellToWCInterrupt[spellName], {
+                        interrupt = stdName,
                         level = slotTier,
-                        isPM = true,
+                        isPM = false,
+                        ability = ab.statName,
                     })
                     createdCount = createdCount + 1
+                end
+
+                if pmInt ~= nil then
+                    local pmName = (ab.key == "DEF")
+                        and ("KJ_WC_PM_Interrupt_" .. spellName)
+                        or string.format("KJ_WC_%s_PM_Interrupt_%s", ab.key, spellName)
+
+                    if CreateWarCasterInterruptVariant(pmName, baseTemplate, pmInt, spellName, spellStat, true, ab.statName, rollStr) then
+                        table.insert(SpellToWCInterrupt[spellName], {
+                            interrupt = pmName,
+                            level = slotTier,
+                            isPM = true,
+                            ability = ab.statName,
+                        })
+                        createdCount = createdCount + 1
+                    end
                 end
             end
         end
     end
 
-    _P("[KJ_WarCaster] Generated " .. tostring(createdCount) .. " War Caster opportunity attack reaction(s).")
+    _P("[KJ_WarCaster] Registered " .. tostring(createdCount) .. " War Caster reaction(s) during StatsLoaded.")
 end
 
 local function EnsureWarCasterReactionsPrepared()
-    if next(SpellToWCInterrupts) == nil then
+    if next(SpellToWCInterrupt) == nil then
         GenerateWarCasterReactions()
     end
 end
@@ -369,36 +424,6 @@ if Ext.IsServer() then
             return string.sub(guid, -36)
         end
         return guid
-    end
-
-    local function GetSpellChildrenMap()
-        if CachedChildrenMap ~= nil then
-            return CachedChildrenMap
-        end
-        CachedChildrenMap = {}
-        for _, spellName in ipairs(Ext.Stats.GetStats("SpellData") or {}) do
-            if not IsNpcOrIgnoredSpell(spellName) then
-                local stat = Ext.Stats.Get(spellName)
-                if stat ~= nil and stat.Using ~= nil and stat.Using ~= "" then
-                    CachedChildrenMap[stat.Using] = CachedChildrenMap[stat.Using] or {}
-                    table.insert(CachedChildrenMap[stat.Using], spellName)
-                end
-            end
-        end
-        return CachedChildrenMap
-    end
-
-    local function CollectSpellFamily(rootSpell, childrenMap, collected)
-        if collected[rootSpell] or IsNpcOrIgnoredSpell(rootSpell) then
-            return
-        end
-        collected[rootSpell] = true
-        local children = childrenMap[rootSpell]
-        if children ~= nil then
-            for _, childName in ipairs(children) do
-                CollectSpellFamily(childName, childrenMap, collected)
-            end
-        end
     end
 
     local function GetMaxAvailableSpellTier(uuid)
@@ -461,7 +486,88 @@ if Ext.IsServer() then
         end
     end
 
-    local function CompileCharacterWarCaster(entity, uuid, childrenMap, payload)
+    local CLASS_DEFAULT_ABILITY = {
+        ["a865965f-501b-46e9-9eaa-7748e8c04d09"] = "Intelligence", -- Wizard
+        ["114e7aee-d1d4-4371-8d90-8a2080592faf"] = "Wisdom",       -- Cleric
+        ["457d0a6e-9da8-4f95-a225-18382f0e94b5"] = "Wisdom",       -- Druid
+        ["36be18ba-23db-4dff-bfa6-10ae9ce3bdf5"] = "Wisdom",       -- Ranger
+        ["784001e2-c96d-4153-beb6-2adbef5abc92"] = "Charisma",     -- Sorcerer
+        ["b4225a4b-4bbe-4d97-9e3c-4719dbd1487c"] = "Charisma",     -- Warlock
+        ["92cd50b6-eb1b-4824-8adb-853e90c34c90"] = "Charisma",     -- Bard
+        ["ff4d9497-023c-434a-bd14-82fc367e991c"] = "Charisma",     -- Paladin
+    }
+
+    local function GetCharacterAbilityScores(entity, uuid)
+        local scores = { Intelligence = 10, Wisdom = 10, Charisma = 10 }
+        if uuid ~= nil and Osi.GetAbility ~= nil then
+            scores.Intelligence = tonumber(Osi.GetAbility(uuid, "Intelligence")) or 10
+            scores.Wisdom = tonumber(Osi.GetAbility(uuid, "Wisdom")) or 10
+            scores.Charisma = tonumber(Osi.GetAbility(uuid, "Charisma")) or 10
+        elseif entity ~= nil and entity.Stats ~= nil and entity.Stats.Abilities ~= nil then
+            scores.Intelligence = tonumber(entity.Stats.Abilities[5]) or 10
+            scores.Wisdom = tonumber(entity.Stats.Abilities[6]) or 10
+            scores.Charisma = tonumber(entity.Stats.Abilities[7]) or 10
+        end
+        return scores
+    end
+
+    local function GetBestSpellAbilityForCharacter(entity, uuid)
+        local scores = GetCharacterAbilityScores(entity, uuid)
+        local classAbilities = {}
+        if entity ~= nil and entity.Classes ~= nil and entity.Classes.Classes ~= nil then
+            for _, cls in ipairs(entity.Classes.Classes) do
+                local mapped = CLASS_DEFAULT_ABILITY[tostring(cls.ClassUUID or "")]
+                if mapped ~= nil then
+                    classAbilities[mapped] = true
+                end
+            end
+        end
+
+        local fallbackAb = "Charisma"
+        local fallbackScore = -1
+        for _, ab in ipairs({ "Intelligence", "Wisdom", "Charisma" }) do
+            if classAbilities[ab] and scores[ab] > fallbackScore then
+                fallbackAb = ab
+                fallbackScore = scores[ab]
+            end
+        end
+        if fallbackScore < 0 then
+            for _, ab in ipairs({ "Intelligence", "Wisdom", "Charisma" }) do
+                if scores[ab] > fallbackScore then
+                    fallbackAb = ab
+                    fallbackScore = scores[ab]
+                end
+            end
+        end
+
+        local spellToBest = {}
+        if entity.SpellBook ~= nil and entity.SpellBook.Spells ~= nil then
+            for _, entry in ipairs(entity.SpellBook.Spells) do
+                local id = entry.Id
+                if id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
+                    local ok, rawAb = pcall(function()
+                        return tostring(entry.SpellCastingAbility or "")
+                    end)
+                    local ab = (ok and ABILITY_SHORT[rawAb] ~= nil) and rawAb or fallbackAb
+                    local prev = spellToBest[id.Prototype]
+                    if prev == nil or scores[ab] > scores[prev] then
+                        spellToBest[id.Prototype] = ab
+                    end
+                    local rootId = GetTrueRootSpell(id.Prototype)
+                    if rootId ~= "" then
+                        local prevRoot = spellToBest[rootId]
+                        if prevRoot == nil or scores[ab] > scores[prevRoot] then
+                            spellToBest[rootId] = ab
+                        end
+                    end
+                end
+            end
+        end
+
+        return spellToBest, fallbackAb
+    end
+
+    local function CompileCharacterWarCaster(entity, uuid, payload)
         RemoveAllCharPassives(uuid)
 
         if Osi.HasPassive(uuid, WAR_CASTER_PASSIVE) == 0 then
@@ -523,35 +629,39 @@ if Ext.IsServer() then
             knownSpells[subSpell] = true
         end
 
-        -- Include only leveled upcast variants (slotTier > 0) whose RootSpellID is in knownSpells
-        for _, spellName in ipairs(Ext.Stats.GetStats("SpellData") or {}) do
-            if not IsNpcOrIgnoredSpell(spellName) then
-                local sStat = Ext.Stats.Get(spellName)
-                if sStat ~= nil and sStat.ModifierList == "SpellData" then
-                    local slotTier = GetSpellSlotTier(sStat.UseCosts)
-                    if slotTier > 0 then
-                        local rootId = GetTrueRootSpell(spellName)
-                        if rootId ~= "" and rootId ~= spellName and knownSpells[rootId] then
-                            knownSpells[spellName] = true
-                        end
-                    end
-                end
+        local upcastAdditions = {}
+        for spellName, _ in pairs(knownSpells) do
+            for _, upcastSpell in ipairs(RootToUpcasts[spellName] or {}) do
+                upcastAdditions[upcastSpell] = true
             end
         end
+        for upcastSpell, _ in pairs(upcastAdditions) do
+            knownSpells[upcastSpell] = true
+        end
 
+        local spellToBest, fallbackAb = GetBestSpellAbilityForCharacter(entity, uuid)
         local maxTier = GetMaxAvailableSpellTier(uuid)
         local hasPM = (Osi.HasPassive(uuid, "PolearmMaster_AttackOfOpportunity") == 1)
             or (Osi.HasPassive(uuid, "PolearmMaster") == 1)
         local boostsList = {}
         local seenInts = {}
 
+        local sortedSpells = {}
         for spellName, _ in pairs(knownSpells) do
-            local wcList = SpellToWCInterrupts[spellName]
+            table.insert(sortedSpells, spellName)
+        end
+        table.sort(sortedSpells)
+
+        for _, spellName in ipairs(sortedSpells) do
+            local rootId = GetTrueRootSpell(spellName)
+            local targetAb = spellToBest[spellName] or (rootId ~= "" and spellToBest[rootId]) or fallbackAb
+            local wcList = SpellToWCInterrupt[spellName]
             if wcList ~= nil then
                 for _, info in ipairs(wcList) do
                     local tierAllowed = (info.level == 0) or (maxTier ~= 0 and math.floor(maxTier / info.level) ~= 0)
                     local featAllowed = (hasPM and info.isPM) or ((not hasPM) and (not info.isPM))
-                    if not seenInts[info.interrupt] and tierAllowed and featAllowed then
+                    local abilityAllowed = (info.ability == "Default") or (info.ability == targetAb)
+                    if tierAllowed and featAllowed and abilityAllowed and not seenInts[info.interrupt] then
                         seenInts[info.interrupt] = true
                         table.insert(boostsList, string.format("UnlockInterrupt(%s)", info.interrupt))
                     end
@@ -601,10 +711,9 @@ if Ext.IsServer() then
         end
 
         EnsureWarCasterReactionsPrepared()
-        local childrenMap = GetSpellChildrenMap()
         local payload = {}
 
-        CompileCharacterWarCaster(entity, uuid, childrenMap, payload)
+        CompileCharacterWarCaster(entity, uuid, payload)
 
         if next(payload) ~= nil then
             syncChannel:Broadcast(Ext.Json.Stringify(payload))
@@ -617,7 +726,6 @@ if Ext.IsServer() then
 
     local function RebuildAllCharacters()
         EnsureWarCasterReactionsPrepared()
-        local childrenMap = GetSpellChildrenMap()
         local payload = {}
 
         CharacterSlotMap = {}
@@ -644,7 +752,7 @@ if Ext.IsServer() then
                 seen[uuid] = true
                 local entity = Ext.Entity.Get(uuid)
                 if entity ~= nil then
-                    CompileCharacterWarCaster(entity, uuid, childrenMap, payload)
+                    CompileCharacterWarCaster(entity, uuid, payload)
                     if CharacterSlotMap[uuid] ~= nil then
                         count = count + 1
                     end
@@ -715,10 +823,10 @@ if Ext.IsServer() then
             DelayedRebuild(character)
         end)
 
-		Ext.Osiris.RegisterListener("UserConnected", 3, "after", function()
-			Ext.Timer.WaitFor(500, function()
-				RebuildAllCharacters()
-			end)
-		end)
-	end)
+        Ext.Osiris.RegisterListener("UserConnected", 3, "after", function()
+            Ext.Timer.WaitFor(500, function()
+                RebuildAllCharacters()
+            end)
+        end)
+    end)
 end

@@ -748,7 +748,33 @@ if Ext.IsServer() then
         for spellName, _ in pairs(knownSpells) do
             table.insert(sortedSpells, spellName)
         end
-        table.sort(sortedSpells)
+
+        local sortedSpells = {}
+        for spellName, _ in pairs(knownSpells) do
+            table.insert(sortedSpells, spellName)
+        end
+
+        local displayNameCache = {}
+        local function GetSpellDisplayText(spellName)
+            if displayNameCache[spellName] ~= nil then
+                return displayNameCache[spellName]
+            end
+            local sStat = Ext.Stats.Get(spellName)
+            local handle = sStat ~= nil and sStat.DisplayName or ""
+            local resolved = handle ~= "" and Ext.Loca.GetTranslatedString(handle) or ""
+            if resolved == "" then
+                resolved = spellName
+            end
+            -- Append spell slot tier so upcasts sort cleanly in ascending level order (e.g. Magic Missile 1 -> 2 -> 3)
+            local tier = GetSpellSlotTier(sStat ~= nil and sStat.UseCosts or "")
+            local sortKey = string.format("%s_%02d_%s", string.lower(resolved), tier, spellName)
+            displayNameCache[spellName] = sortKey
+            return sortKey
+        end
+
+        table.sort(sortedSpells, function(a, b)
+            return GetSpellDisplayText(a) < GetSpellDisplayText(b)
+        end)
 
         for _, spellName in ipairs(sortedSpells) do
             local rootId = GetTrueRootSpell(spellName)

@@ -47,6 +47,26 @@ local function HasFlag(flagList, targetFlag)
     return false
 end
 
+local function ChunkBoostsList(items, separator, maxLen)
+    local chunks = {}
+    local current = ""
+    for _, item in ipairs(items) do
+        local candidate = current == "" and item or (current .. separator .. item)
+        if #candidate > maxLen then
+            if current ~= "" then
+                table.insert(chunks, current)
+            end
+            current = item
+        else
+            current = candidate
+        end
+    end
+    if current ~= "" then
+        table.insert(chunks, current)
+    end
+    return chunks
+end
+
 local function GetTrueRootSpell(spellName)
     local current = spellName
     local visited = {}
@@ -65,32 +85,55 @@ local function GetTrueRootSpell(spellName)
     return current
 end
 
+local function ResolveInheritedDisplayName(statName)
+    local current = Ext.Stats.Get(statName)
+    local visited = {}
+    while current ~= nil do
+        if current.Name ~= nil then
+            if visited[current.Name] then
+                break
+            end
+            visited[current.Name] = true
+        end
+
+        local rawHandle = current.DisplayName or ""
+        if rawHandle ~= "" then
+            local cleanHandle = string.gsub(rawHandle, ";%d+$", "")
+            local translated = Ext.Loca.GetTranslatedString(cleanHandle)
+            if translated ~= nil and translated ~= "" then
+                return translated
+            end
+            if not string.match(cleanHandle, "^h[%x]+g[%x]+g[%x]+g[%x]+g[%x]+$") then
+                return cleanHandle
+            end
+        end
+
+        local parentName = current.Using
+        if parentName ~= nil and parentName ~= "" then
+            current = Ext.Stats.Get(parentName)
+        else
+            break
+        end
+    end
+    return statName
+end
+
 local function IsEligibleWarCasterSpell(spellName, stat)
-    if stat == nil or stat.ModifierList ~= "SpellData" then
+    if stat == nil or stat.ModifierList ~= "SpellData" or IsNpcOrIgnoredSpell(spellName) then
         return false
     end
 
     local areaRadius = tonumber(stat.AreaRadius or 0) or 0
-    local aoeCond = stat.AoEConditions or ""
-    if areaRadius > 0 and aoeCond ~= "false" then
-        return false
-    end
-
-    if IsNpcOrIgnoredSpell(spellName) then
+    if areaRadius > 0 and (stat.AoEConditions or "") ~= "false" then
         return false
     end
 
     local spellType = stat.SpellType or ""
-    if spellType ~= "Target" and spellType ~= "Projectile" then
+    if (spellType ~= "Target" and spellType ~= "Projectile") or not HasFlag(stat.SpellFlags, "IsSpell") then
         return false
     end
 
-    if not HasFlag(stat.SpellFlags, "IsSpell") then
-        return false
-    end
-
-    local intProto = stat.InterruptPrototype or ""
-    if intProto ~= "" then
+    if (stat.InterruptPrototype or "") ~= "" or HasFlag(stat.SpellFlags, "IsLinkedSpellContainer") then
         return false
     end
 
@@ -104,40 +147,22 @@ local function IsEligibleWarCasterSpell(spellName, stat)
         return false
     end
 
-    local level = stat.Level or 0
-    local usesSpellSlot = string.find(useCosts, "SpellSlots?G?r?o?u?p?:") ~= nil
-    if level ~= 0 and not usesSpellSlot then
+    if (stat.Level or 0) ~= 0 and not string.find(useCosts, "SpellSlots?G?r?o?u?p?:") then
         return false
     end
 
     local targetCond = stat.TargetConditions or ""
-    if targetCond == "" or targetCond == "Self()" or string.find(targetCond, "Ground%(%)") then
+    if targetCond == "" or targetCond == "Self()" or string.find(targetCond, "Ground%(%)") or string.find(targetCond, "not%s+Combat%(%)") then
         return false
     end
 
-    if string.find(targetCond, "not%s+Combat%(%)") then
-        return false
-    end
-
-    local spellRoll = stat.SpellRoll or ""
     local intent = stat.VerbalIntent or ""
-    local hasRollOrSave = spellRoll ~= ""
     local isDamageSpell = (intent == "Damage")
-
-    if not hasRollOrSave and not isDamageSpell then
+    if (stat.SpellRoll or "") == "" and not isDamageSpell then
         return false
     end
 
-    local isHostile = isDamageSpell or (intent == "Debuff") or (intent == "Control") or HasFlag(stat.SpellFlags, "IsHarmful")
-    if not isHostile then
-        return false
-    end
-
-    if HasFlag(stat.SpellFlags, "IsLinkedSpellContainer") then
-        return false
-    end
-
-    return true
+    return isDamageSpell or (intent == "Debuff") or (intent == "Control") or HasFlag(stat.SpellFlags, "IsHarmful")
 end
 
 local function BuildInterruptCostFromSpell(useCosts)
@@ -184,44 +209,30 @@ local function CleanKhonCondition(cond)
     end
     local trimmed = string.gsub(cond, ";+%s*$", "")
     trimmed = string.gsub(trimmed, "^%s+", "")
-    trimmed = string.gsub(trimmed, "%s+$", "")
-    return trimmed
+    return string.gsub(trimmed, "%s+$", "")
 end
 
 local SINGLE_ARG_KHON_FUNCS = {
-    -- Entity & Creature Types
     "Character", "Item", "Dead", "Player", "Party", "Summon",
     "Familiar", "Companion", "Follower", "Origin", "Avatar", "Boss",
     "Humanoid", "Undead", "Construct", "Beast", "Animal", "Dragon",
     "Elemental", "Fey", "Fiend", "Giant", "Monstrosity", "Ooze",
     "Plant", "Insect", "Aberration", "Celestial", "Shapechanger", "Spirit",
-
-    -- Status & Crowd Control States
     "IsDowned", "IsCrowdControlled", "Incapacitated", "Unconscious",
     "Prone", "Blinded", "Charmed", "Frightened", "Paralyzed",
     "Petrified", "Poisoned", "Restrained", "Stunned", "Silenced",
     "Banished", "Surprised", "Invisible", "Hidden", "Sneaking",
     "Concentration", "Concentrating",
-
-    -- Movement & Environment States
     "Combat", "TurnBased", "Grounded", "Flying", "Falling",
     "Climbing", "Swimming", "Jumping", "InSunlight",
     "Obscured", "HeavilyObscured", "LightlyObscured",
 }
 
 local SPELLDATA_ONLY_FUNCS = {
-    "CanUseWeaponActions",
-    "CanUseSpellActions",
-    "HasActionPoint",
-    "HasBonusActionPoint",
-    "HasReactionActionPoint",
-    "IsWeaponAttack",
-    "IsSpellAttack",
-    "CanSee",
-    "HasLineOfSight",
-    "InRange",
-    "HasSpell",
-    "IsSpellPrepared",
+    "CanUseWeaponActions", "CanUseSpellActions", "HasActionPoint",
+    "HasBonusActionPoint", "HasReactionActionPoint", "IsWeaponAttack",
+    "IsSpellAttack", "CanSee", "HasLineOfSight", "InRange",
+    "HasSpell", "IsSpellPrepared",
 }
 
 local function ScrubSpellDataOnlyFunctions(condStr)
@@ -240,34 +251,18 @@ local function ScrubSpellDataOnlyFunctions(condStr)
     return CleanKhonCondition(clean)
 end
 
-local function TranslateTargetConditionsForInterrupt(rawTargetCond)
-    local clean = ScrubSpellDataOnlyFunctions(rawTargetCond)
+local function TranslateConditionContext(rawCond, entityCtx, selfCtx)
+    local clean = ScrubSpellDataOnlyFunctions(rawCond)
     if clean == "" then
         return ""
     end
 
-    clean = string.gsub(clean, "Self%(%)", "Self(context.Observer, context.Target)")
+    clean = string.gsub(clean, "Self%(%)", selfCtx)
     for _, fnName in ipairs(SINGLE_ARG_KHON_FUNCS) do
-        clean = string.gsub(clean, "(%f[%w_]" .. fnName .. ")%(%)", "%1(context.Target)")
+        clean = string.gsub(clean, "(%f[%w_]" .. fnName .. ")%(%)", "%1(" .. entityCtx .. ")")
     end
-    clean = string.gsub(clean, "(%f[%w_]Tagged)%(([^,)]+)%)", "%1(%2, context.Target)")
-    clean = string.gsub(clean, "(%f[%w_]HasStatus)%(([^,)]+)%)", "%1(%2, context.Target)")
-
-    return clean
-end
-
-local function TranslateRequirementConditionsForInterrupt(rawReqCond)
-    local clean = ScrubSpellDataOnlyFunctions(rawReqCond)
-    if clean == "" then
-        return ""
-    end
-
-    clean = string.gsub(clean, "Self%(%)", "Self(context.Observer, context.Observer)")
-    for _, fnName in ipairs(SINGLE_ARG_KHON_FUNCS) do
-        clean = string.gsub(clean, "(%f[%w_]" .. fnName .. ")%(%)", "%1(context.Observer)")
-    end
-    clean = string.gsub(clean, "(%f[%w_]Tagged)%(([^,)]+)%)", "%1(%2, context.Observer)")
-    clean = string.gsub(clean, "(%f[%w_]HasStatus)%(([^,)]+)%)", "%1(%2, context.Observer)")
+    clean = string.gsub(clean, "(%f[%w_]Tagged)%(([^,)]+)%)", "%1(%2, " .. entityCtx .. ")")
+    clean = string.gsub(clean, "(%f[%w_]HasStatus)%(([^,)]+)%)", "%1(%2, " .. entityCtx .. ")")
 
     return clean
 end
@@ -278,11 +273,7 @@ local function BuildWarCasterConditions(stdCond, pmCond, spellStat, isPM)
 
     local triggerCond = cleanStd
     if isPM and cleanPm ~= "" then
-        if triggerCond ~= "" then
-            triggerCond = string.format("((%s) or (%s))", triggerCond, cleanPm)
-        else
-            triggerCond = cleanPm
-        end
+        triggerCond = triggerCond ~= "" and string.format("((%s) or (%s))", triggerCond, cleanPm) or cleanPm
     end
 
     local featCond = isPM
@@ -294,37 +285,23 @@ local function BuildWarCasterConditions(stdCond, pmCond, spellStat, isPM)
         spellBlockCond = spellBlockCond .. " and not HasStatus('SG_Silenced', context.Observer)"
     end
 
-    local targetRadius = tostring(spellStat.TargetRadius or "")
-    local rangeGuard = ""
-    if targetRadius == "1.5" then
-        rangeGuard = " and DistanceToTarget() <= 2.0"
-    end
+    local rangeGuard = tostring(spellStat.TargetRadius or "") == "1.5" and " and DistanceToTarget() <= 2.0" or ""
 
     local extraClauses = {}
-    local translatedTarget = TranslateTargetConditionsForInterrupt(spellStat.TargetConditions)
+    local translatedTarget = TranslateConditionContext(spellStat.TargetConditions, "context.Target", "Self(context.Observer, context.Target)")
     if translatedTarget ~= "" then
         table.insert(extraClauses, string.format("(%s)", translatedTarget))
     end
 
-    local translatedReq = TranslateRequirementConditionsForInterrupt(spellStat.RequirementConditions)
+    local translatedReq = TranslateConditionContext(spellStat.RequirementConditions, "context.Observer", "Self(context.Observer, context.Observer)")
     if translatedReq ~= "" then
         table.insert(extraClauses, string.format("(%s)", translatedReq))
     end
 
     local extraStr = #extraClauses > 0 and (" and " .. table.concat(extraClauses, " and ")) or ""
+    local guardCond = string.format("(%s) and (%s)%s%s", spellBlockCond, featCond, rangeGuard, extraStr)
 
-    local guardCond = string.format(
-        "not Self(context.Observer, context.Target) and Enemy() and (%s) and (%s)%s%s",
-        spellBlockCond,
-        featCond,
-        rangeGuard,
-        extraStr
-    )
-
-    if triggerCond ~= "" then
-        return string.format("(%s) and (%s)", triggerCond, guardCond)
-    end
-    return guardCond
+    return triggerCond ~= "" and string.format("(%s) and (%s)", triggerCond, guardCond) or guardCond
 end
 
 local function GetSpellRollString(spellStat)
@@ -423,8 +400,6 @@ local function GenerateWarCasterReactions()
         return
     end
 
-    local createdCount = 0
-
     for _, spellName in ipairs(allSpells) do
         local spellStat = Ext.Stats.Get(spellName)
         if IsEligibleWarCasterSpell(spellName, spellStat) then
@@ -455,7 +430,6 @@ local function GenerateWarCasterReactions()
                         isPM = false,
                         ability = ab.statName,
                     })
-                    createdCount = createdCount + 1
                 end
 
                 if pmInt ~= nil then
@@ -470,14 +444,11 @@ local function GenerateWarCasterReactions()
                             isPM = true,
                             ability = ab.statName,
                         })
-                        createdCount = createdCount + 1
                     end
                 end
             end
         end
     end
-
-    _P("[KJ_WarCaster] Registered " .. tostring(createdCount) .. " War Caster reaction(s) during StatsLoaded.")
 end
 
 local function EnsureWarCasterReactionsPrepared()
@@ -530,10 +501,7 @@ if Ext.IsServer() then
             return 1
         end
         local maxTier = math.ceil(lvl / 2)
-        if math.floor(maxTier / 7) ~= 0 then
-            return 6
-        end
-        return maxTier
+        return math.floor(maxTier / 7) ~= 0 and 6 or maxTier
     end
 
     local function RemoveAllCharPassives(uuid)
@@ -575,13 +543,62 @@ if Ext.IsServer() then
         return nil
     end
 
-    local function ApplyCharacterPassives(uuid)
-        local cleanUuid = NormalizeUuid(uuid)
-        for _, pName in ipairs(CharacterActivePassives[cleanUuid] or {}) do
-            if Osi.HasPassive(cleanUuid, pName) == 0 then
-                Osi.AddPassive(cleanUuid, pName)
+    local function CharacterHasInterrupt(uuid, targetInterrupt)
+        if targetInterrupt == nil or targetInterrupt == "" then
+            return true
+        end
+        local ent = Ext.Entity.Get(uuid)
+        if ent == nil or ent.InterruptContainer == nil or ent.InterruptContainer.Interrupts == nil then
+            return false
+        end
+        for _, ie in ipairs(ent.InterruptContainer.Interrupts) do
+            if ie ~= nil and ie.InterruptData ~= nil and ie.InterruptData.Interrupt == targetInterrupt then
+                return true
             end
         end
+        return false
+    end
+
+    local function GetLastInterruptInPassive(passiveName)
+        local pStat = Ext.Stats.Get(passiveName)
+        if pStat == nil or pStat.Boosts == nil or pStat.Boosts == "" then
+            return nil
+        end
+        local lastInt = nil
+        for intId in string.gmatch(pStat.Boosts, "UnlockInterrupt%(([^%)]+)%)") do
+            lastInt = intId
+        end
+        return lastInt
+    end
+
+    local function ApplyPassivesSequentially(uuid, passiveList, index)
+        if index > #passiveList then
+            return
+        end
+
+        local pName = passiveList[index]
+        local expectedLastInt = GetLastInterruptInPassive(pName)
+
+        if Osi.HasPassive(uuid, pName) == 0 then
+            Osi.AddPassive(uuid, pName)
+        end
+
+        local attempts = 0
+        local function WaitUntilApplied()
+            attempts = attempts + 1
+            if (Osi.HasPassive(uuid, pName) == 1 and CharacterHasInterrupt(uuid, expectedLastInt)) or attempts >= 120 then
+                ApplyPassivesSequentially(uuid, passiveList, index + 1)
+            else
+                Ext.Timer.WaitFor(1, WaitUntilApplied)
+            end
+        end
+
+        Ext.Timer.WaitFor(1, WaitUntilApplied)
+    end
+
+    local function ApplyCharacterPassives(uuid)
+        local cleanUuid = NormalizeUuid(uuid)
+        ApplyPassivesSequentially(cleanUuid, CharacterActivePassives[cleanUuid] or {}, 1)
     end
 
     local CLASS_DEFAULT_ABILITY = {
@@ -710,16 +727,12 @@ if Ext.IsServer() then
             end
         end
 
-        -- Expand linked spell containers (e.g. Chromatic Orb -> Acid, Cold, Fire, Lightning, Poison, Thunder)
         local containerChildren = {}
         for spellName, _ in pairs(knownSpells) do
             local sStat = Ext.Stats.Get(spellName)
-            if sStat ~= nil and sStat.ModifierList == "SpellData" then
-                local cSpells = sStat.ContainerSpells or ""
-                if cSpells ~= "" then
-                    for subSpell in string.gmatch(cSpells, "[^;]+") do
-                        containerChildren[subSpell] = true
-                    end
+            if sStat ~= nil and sStat.ModifierList == "SpellData" and (sStat.ContainerSpells or "") ~= "" then
+                for subSpell in string.gmatch(sStat.ContainerSpells, "[^;]+") do
+                    containerChildren[subSpell] = true
                 end
             end
         end
@@ -743,59 +756,17 @@ if Ext.IsServer() then
             or (Osi.HasPassive(uuid, "PolearmMaster") == 1)
         local boostsList = {}
         local seenInts = {}
-
-        local sortedSpells = {}
-        for spellName, _ in pairs(knownSpells) do
-            table.insert(sortedSpells, spellName)
-        end
-
         local sortedSpells = {}
         for spellName, _ in pairs(knownSpells) do
             table.insert(sortedSpells, spellName)
         end
 
         local displayNameCache = {}
-        local function ResolveInheritedDisplayName(spellName)
-            local current = Ext.Stats.Get(spellName)
-            local visited = {}
-            while current ~= nil do
-                if current.Name ~= nil then
-                    if visited[current.Name] then
-                        break
-                    end
-                    visited[current.Name] = true
-                end
-
-                local rawHandle = current.DisplayName or ""
-                if rawHandle ~= "" then
-                    -- Strip ';1' or ';2' version suffixes so Ext.Loca.GetTranslatedString resolves cleanly
-                    local cleanHandle = string.gsub(rawHandle, ";%d+$", "")
-                    local translated = Ext.Loca.GetTranslatedString(cleanHandle)
-                    if translated ~= nil and translated ~= "" then
-                        return translated
-                    end
-                    -- If rawHandle wasn't a localization GUID, use it directly as text
-                    if not string.match(cleanHandle, "^h[%x]+g[%x]+g[%x]+g[%x]+g[%x]+$") then
-                        return cleanHandle
-                    end
-                end
-
-                local parentName = current.Using
-                if parentName ~= nil and parentName ~= "" then
-                    current = Ext.Stats.Get(parentName)
-                else
-                    break
-                end
-            end
-            return spellName
-        end
-
-        local function GetSpellDisplayText(spellName)
+        local function GetSpellSortKey(spellName)
             if displayNameCache[spellName] ~= nil then
                 return displayNameCache[spellName]
             end
             local resolved = ResolveInheritedDisplayName(spellName)
-            -- Strip trailing '(Level X)' or ' - Fire' variant tags for clean base grouping
             local cleanBase = string.gsub(resolved, "%s*%([Ll]evel%s*%d+%)", "")
             local sStat = Ext.Stats.Get(spellName)
             local tier = GetSpellSlotTier(sStat ~= nil and sStat.UseCosts or "")
@@ -805,7 +776,7 @@ if Ext.IsServer() then
         end
 
         table.sort(sortedSpells, function(a, b)
-            return GetSpellDisplayText(a) < GetSpellDisplayText(b)
+            return GetSpellSortKey(a) < GetSpellSortKey(b)
         end)
 
         for _, spellName in ipairs(sortedSpells) do
@@ -825,35 +796,17 @@ if Ext.IsServer() then
             end
         end
 
-        local slotIdx = 1
-        local currentChunk = ""
-
-        local function FlushChunk(chunk)
-            if chunk == "" or slotIdx == SLOTS_PER_CHAR + 1 then
-                return
-            end
+        local chunks = ChunkBoostsList(boostsList, ";", 1600)
+        for slotIdx = 1, math.min(#chunks, SLOTS_PER_CHAR) do
             local pName = GetCharPassiveName(charIdx, slotIdx)
             local pStat = Ext.Stats.Get(pName)
             if pStat ~= nil then
-                pStat.Boosts = chunk
+                pStat.Boosts = chunks[slotIdx]
                 pStat:Sync()
-                payload[pName] = chunk
+                payload[pName] = chunks[slotIdx]
                 table.insert(CharacterActivePassives[uuid], pName)
             end
-            slotIdx = slotIdx + 1
         end
-
-        for _, boost in ipairs(boostsList) do
-            local candidate = currentChunk == "" and boost or (currentChunk .. ";" .. boost)
-            if math.floor(#candidate / 1600) ~= 0 then
-                FlushChunk(currentChunk)
-                currentChunk = boost
-            else
-                currentChunk = candidate
-            end
-        end
-
-        FlushChunk(currentChunk)
     end
 
     local function RebuildSingleCharacter(characterGuid)
@@ -868,7 +821,6 @@ if Ext.IsServer() then
 
         EnsureWarCasterReactionsPrepared()
         local payload = {}
-
         CompileCharacterWarCaster(entity, uuid, payload)
 
         if next(payload) ~= nil then
@@ -900,7 +852,6 @@ if Ext.IsServer() then
             table.insert(rows, r)
         end
 
-        local count = 0
         for _, row in ipairs(rows) do
             local rawGuid = table.unpack(row)
             local uuid = NormalizeUuid(rawGuid)
@@ -909,9 +860,6 @@ if Ext.IsServer() then
                 local entity = Ext.Entity.Get(uuid)
                 if entity ~= nil then
                     CompileCharacterWarCaster(entity, uuid, payload)
-                    if CharacterSlotMap[uuid] ~= nil then
-                        count = count + 1
-                    end
                 end
             end
         end
@@ -923,8 +871,6 @@ if Ext.IsServer() then
                 ApplyCharacterPassives(uuid)
             end
         end)
-
-        _P("[KJ_WarCaster] Initialized War Caster reactions for " .. tostring(count) .. " character(s).")
     end
 
     function KJ_RebuildWarCaster()

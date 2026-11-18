@@ -521,6 +521,7 @@ if Ext.IsServer() then
             local pStat = Ext.Stats.Get(pName)
             if pStat ~= nil then
                 pStat.Boosts = ""
+				pStat:Sync()
                 payload[pName] = ""
             end
         end

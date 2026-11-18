@@ -580,21 +580,29 @@ if Ext.IsServer() then
         local pName = passiveList[index]
         local expectedLastInt = GetLastInterruptInPassive(pName)
 
-        if Osi.HasPassive(uuid, pName) == 0 then
-            Osi.AddPassive(uuid, pName)
-        end
+        local removeAttempts = 0
+        local function WaitForRemovalThenAdd()
+            removeAttempts = removeAttempts + 1
+            if Osi.HasPassive(uuid, pName) == 0 or removeAttempts >= 60 then
+                Osi.AddPassive(uuid, pName)
 
-        local attempts = 0
-        local function WaitUntilApplied()
-            attempts = attempts + 1
-            if (Osi.HasPassive(uuid, pName) == 1 and CharacterHasInterrupt(uuid, expectedLastInt)) or attempts >= 120 then
-                ApplyPassivesSequentially(uuid, passiveList, index + 1)
-            else
+                local applyAttempts = 0
+                local function WaitUntilApplied()
+                    applyAttempts = applyAttempts + 1
+                    if (Osi.HasPassive(uuid, pName) == 1 and CharacterHasInterrupt(uuid, expectedLastInt)) or applyAttempts >= 120 then
+                        ApplyPassivesSequentially(uuid, passiveList, index + 1)
+                    else
+                        Ext.Timer.WaitFor(1, WaitUntilApplied)
+                    end
+                end
+
                 Ext.Timer.WaitFor(1, WaitUntilApplied)
+            else
+                Ext.Timer.WaitFor(1, WaitForRemovalThenAdd)
             end
         end
 
-        Ext.Timer.WaitFor(1, WaitUntilApplied)
+        WaitForRemovalThenAdd()
     end
 
     local function ApplyCharacterPassives(uuid)
@@ -882,12 +890,6 @@ if Ext.IsServer() then
         RebuildAllCharacters()
     end)
 
-    Ext.Events.GameStateChanged:Subscribe(function(e)
-        if e.ToState == "Running" then
-            RebuildAllCharacters()
-        end
-    end)
-
     Ext.Events.SessionLoaded:Subscribe(function()
         local function DelayedRebuild(character)
             local uuid = NormalizeUuid(character)
@@ -905,6 +907,19 @@ if Ext.IsServer() then
                 end
             end)
         end
+
+        Ext.Entity.OnChange("PassiveContainer", function(entity)
+            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
+                local uuid = NormalizeUuid(entity.Uuid.EntityUuid)
+                if uuid ~= nil then
+                    local hasWC = (Osi.HasPassive(uuid, WAR_CASTER_PASSIVE) == 1)
+                    local hasSlot = (CharacterSlotMap[uuid] ~= nil)
+                    if hasWC ~= hasSlot then
+                        DelayedRebuild(uuid)
+                    end
+                end
+            end
+        end)
 
         Ext.Entity.OnChange("SpellBookPrepares", function(entity)
             if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then

@@ -755,19 +755,51 @@ if Ext.IsServer() then
         end
 
         local displayNameCache = {}
+        local function ResolveInheritedDisplayName(spellName)
+            local current = Ext.Stats.Get(spellName)
+            local visited = {}
+            while current ~= nil do
+                if current.Name ~= nil then
+                    if visited[current.Name] then
+                        break
+                    end
+                    visited[current.Name] = true
+                end
+
+                local rawHandle = current.DisplayName or ""
+                if rawHandle ~= "" then
+                    -- Strip ';1' or ';2' version suffixes so Ext.Loca.GetTranslatedString resolves cleanly
+                    local cleanHandle = string.gsub(rawHandle, ";%d+$", "")
+                    local translated = Ext.Loca.GetTranslatedString(cleanHandle)
+                    if translated ~= nil and translated ~= "" then
+                        return translated
+                    end
+                    -- If rawHandle wasn't a localization GUID, use it directly as text
+                    if not string.match(cleanHandle, "^h[%x]+g[%x]+g[%x]+g[%x]+g[%x]+$") then
+                        return cleanHandle
+                    end
+                end
+
+                local parentName = current.Using
+                if parentName ~= nil and parentName ~= "" then
+                    current = Ext.Stats.Get(parentName)
+                else
+                    break
+                end
+            end
+            return spellName
+        end
+
         local function GetSpellDisplayText(spellName)
             if displayNameCache[spellName] ~= nil then
                 return displayNameCache[spellName]
             end
+            local resolved = ResolveInheritedDisplayName(spellName)
+            -- Strip trailing '(Level X)' or ' - Fire' variant tags for clean base grouping
+            local cleanBase = string.gsub(resolved, "%s*%([Ll]evel%s*%d+%)", "")
             local sStat = Ext.Stats.Get(spellName)
-            local handle = sStat ~= nil and sStat.DisplayName or ""
-            local resolved = handle ~= "" and Ext.Loca.GetTranslatedString(handle) or ""
-            if resolved == "" then
-                resolved = spellName
-            end
-            -- Append spell slot tier so upcasts sort cleanly in ascending level order (e.g. Magic Missile 1 -> 2 -> 3)
             local tier = GetSpellSlotTier(sStat ~= nil and sStat.UseCosts or "")
-            local sortKey = string.format("%s_%02d_%s", string.lower(resolved), tier, spellName)
+            local sortKey = string.format("%s_%02d_%s", string.lower(cleanBase), tier, spellName)
             displayNameCache[spellName] = sortKey
             return sortKey
         end

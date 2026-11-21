@@ -473,14 +473,18 @@ if Ext.IsClient() then
         end
     end)
 
-    Ext.Events.GameStateChanged:Subscribe(function(e)
-        if e.ToState == "Running" then
-            EnsureWarCasterReactionsPrepared()
-            Ext.Timer.WaitFor(500, function()
-                requestChannel:SendToServer("")
-            end)
-        end
-    end)
+    local ClientNeedsSync = true
+	Ext.Events.GameStateChanged:Subscribe(function(e)
+		if e.ToState == "LoadLevel" or e.ToState == "LoadSession" or e.ToState == "UnloadLevel" then
+			ClientNeedsSync = true
+		elseif e.ToState == "Running" and ClientNeedsSync then
+			ClientNeedsSync = false
+			EnsureWarCasterReactionsPrepared()
+			Ext.Timer.WaitFor(500, function()
+				requestChannel:SendToServer("")
+			end)
+		end
+	end)
 end
 
 if Ext.IsServer() then

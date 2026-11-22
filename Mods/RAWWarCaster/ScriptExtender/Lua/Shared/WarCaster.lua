@@ -925,17 +925,55 @@ if Ext.IsServer() then
             end
         end)
 
-        Ext.Entity.OnChange("SpellBookPrepares", function(entity)
-            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
-                DelayedRebuild(entity.Uuid.EntityUuid)
-            end
-        end)
+        local LastClassSpellSignature = {}
 
-        Ext.Entity.OnChange("SpellBook", function(entity)
-            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
-                DelayedRebuild(entity.Uuid.EntityUuid)
+        local function ComputeClassSpellSignature(entity)
+            local list = {}
+            local seen = {}
+            if entity.SpellBookPrepares ~= nil and entity.SpellBookPrepares.PreparedSpells ~= nil then
+                for _, entry in ipairs(entity.SpellBookPrepares.PreparedSpells) do
+                    local proto = entry.OriginatorPrototype
+                    local src = entry.ProgressionSource ~= nil and tostring(entry.ProgressionSource) or ""
+                    local srcType = tostring(entry.SourceType or "")
+                    if proto ~= nil and proto ~= ""
+                        and src ~= "" and src ~= "00000000-0000-0000-0000-000000000000"
+                        and srcType ~= "Boost" and srcType ~= "WeaponSpell"
+                        and not seen[proto] then
+                        seen[proto] = true
+                        table.insert(list, proto)
+                    end
+                end
+            elseif entity.SpellBook ~= nil and entity.SpellBook.Spells ~= nil then
+                for _, entry in ipairs(entity.SpellBook.Spells) do
+                    local id = entry.Id
+                    if id ~= nil and id.Prototype ~= nil and id.Prototype ~= "" then
+                        local src = id.ProgressionSource ~= nil and tostring(id.ProgressionSource) or ""
+                        if src ~= "" and src ~= "00000000-0000-0000-0000-000000000000" and not seen[id.Prototype] then
+                            seen[id.Prototype] = true
+                            table.insert(list, id.Prototype)
+                        end
+                    end
+                end
             end
-        end)
+            table.sort(list)
+            return table.concat(list, ";")
+        end
+
+        local function OnSpellBookChanged(entity)
+            if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
+                local uuid = NormalizeUuid(entity.Uuid.EntityUuid)
+                if uuid ~= nil then
+                    local sig = ComputeClassSpellSignature(entity)
+                    if sig ~= LastClassSpellSignature[uuid] then
+                        LastClassSpellSignature[uuid] = sig
+                        DelayedRebuild(uuid)
+                    end
+                end
+            end
+        end
+
+        Ext.Entity.OnChange("SpellBookPrepares", OnSpellBookChanged)
+        Ext.Entity.OnChange("SpellBook", OnSpellBookChanged)
 
         Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)
             DelayedRebuild(character)

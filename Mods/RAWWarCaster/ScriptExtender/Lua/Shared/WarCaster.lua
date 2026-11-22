@@ -963,10 +963,14 @@ if Ext.IsServer() then
             if entity ~= nil and entity.Uuid ~= nil and entity.Uuid.EntityUuid ~= nil then
                 local uuid = NormalizeUuid(entity.Uuid.EntityUuid)
                 if uuid ~= nil then
-                    local sig = ComputeClassSpellSignature(entity)
-                    if sig ~= LastClassSpellSignature[uuid] then
-                        LastClassSpellSignature[uuid] = sig
-                        DelayedRebuild(uuid)
+                    if Osi.HasPassive(uuid, WAR_CASTER_PASSIVE) == 1 then
+                        local sig = ComputeClassSpellSignature(entity)
+                        if sig ~= LastClassSpellSignature[uuid] then
+                            LastClassSpellSignature[uuid] = sig
+                            DelayedRebuild(uuid)
+                        end
+                    else
+                        LastClassSpellSignature[uuid] = nil
                     end
                 end
             end

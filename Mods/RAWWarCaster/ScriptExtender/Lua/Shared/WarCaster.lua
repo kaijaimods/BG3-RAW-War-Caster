@@ -886,12 +886,23 @@ if Ext.IsServer() then
         end)
     end
 
+    local PartyRebuildToken = 0
+    local function SchedulePartyRebuild(delayMs)
+        PartyRebuildToken = PartyRebuildToken + 1
+        local token = PartyRebuildToken
+        Ext.Timer.WaitFor(delayMs, function()
+            if PartyRebuildToken == token then
+                RebuildAllCharacters()
+            end
+        end)
+    end
+
     function KJ_RebuildWarCaster()
         RebuildAllCharacters()
     end
 
     requestChannel:SetHandler(function()
-        RebuildAllCharacters()
+        SchedulePartyRebuild(100)
     end)
 
     Ext.Events.SessionLoaded:Subscribe(function()
@@ -988,9 +999,7 @@ if Ext.IsServer() then
         end)
 
         Ext.Osiris.RegisterListener("UserConnected", 3, "after", function()
-            Ext.Timer.WaitFor(500, function()
-                RebuildAllCharacters()
-            end)
+            SchedulePartyRebuild(750)
         end)
     end)
 end
